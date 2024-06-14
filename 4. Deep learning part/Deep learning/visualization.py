@@ -2,13 +2,12 @@ import matplotlib.pyplot as plt
 from train import train_model
 
 # Visualize the training loss
-def plot_training_loss(train_losses):
-
-    plt.figure(figsize=(10, 5))
-    plt.plot(train_losses, label='Training loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Training loss')
-    plt.title('Training loss over epoch')
+def plot_training_loss(train_losses, val_losses):
+    epochs = range(len(train_losses))
+    plt.plot(epochs, train_losses, label='Train Loss')
+    plt.plot(epochs, val_losses, label='Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
     plt.legend()
     plt.show()
 

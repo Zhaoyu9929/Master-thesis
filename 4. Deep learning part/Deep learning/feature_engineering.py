@@ -5,9 +5,6 @@ def extract_time_features(data):
     data['month'] = data['date'].dt.month
     return data
 
-def prepare_mlp_input(data, features):
-    return data[features]
-
 # Create sequences
 def create_sequences(data, seq_length):
     xs, ys = [], []
@@ -16,4 +13,4 @@ def create_sequences(data, seq_length):
         y = data[i+seq_length]
         xs.append(x)
         ys.append(y)
-    return np.array(xs), np.array(ys)
+    return np.array(xs, dtype=np.float32), np.array(ys, dtype=np.float32)
