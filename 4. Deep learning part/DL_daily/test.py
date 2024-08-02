@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from utils import mdn_loss
+from utils import mdn_loss_test
 from data_preprocessing import prepare_lstm_data, prepare_mlp_data, inverse_normalize_count
 
 def test_model(model):
@@ -9,19 +9,22 @@ def test_model(model):
     mlp_data = prepare_mlp_data()
 
     total_nll_losses = []
-    # total_rmse_losses = []
     total_mae_losses = []
     total_mape_losses = []
     total_r2_scores = []
+    total_picp = []
+    total_ll = []
 
     for _, _, X_test_tensor, y_test_tensor in windows:
         
         nll_losses = []
-        # rmse_losses = []
         mae_losses = []
         mape_losses = []
         all_predicted = []
         all_actual = []
+        picp_coverage = []
+        log_likelihoods = []
+
     
         with torch.no_grad():
             for i in range(len(X_test_tensor)):
@@ -34,7 +37,7 @@ def test_model(model):
 
                 # Get the model output
                 pi, sigma, mu = model(seq, mlp_input)
-                loss = mdn_loss(pi, sigma, mu, label)
+                loss = mdn_loss_test(pi, sigma, mu, label)
                 nll_losses.append(loss.item())
 
                 # Select the Gaussian with the highest probability (pi)
@@ -63,24 +66,59 @@ def test_model(model):
                     mape_loss = float('inf')
                 mape_losses.append(mape_loss)
                 
+                # Calculate PICP
+                num_samples = 100
+                samples = []
+                for _ in range(num_samples):
+                    idx = torch.multinomial(pi, 1).item()
+                    sampled_value = np.random.normal(mu[0, idx].item(), sigma[0, idx].item())
+                    samples.append(sampled_value)
+
+                samples = np.array(samples)
+                samples_tensor = torch.tensor(samples, dtype=torch.float32)
+                samples_tensor = inverse_normalize_count(samples_tensor, scaler)
+
+                # samples_tensor already is numpy array after inverse_normalize_count
+                lower_bound = np.percentile(samples_tensor, 2.5)
+                upper_bound = np.percentile(samples_tensor, 97.5)
+                coverage = (label.item() >= lower_bound) and (label.item() <= upper_bound)
+                coverage = coverage * 100
+                picp_coverage.append(coverage)
+
+                # Calculate log-likelihood (LL)
+                mixture_prob = 0
+                for j in range(len(pi[0])):
+                    norm_prob = (1 / np.sqrt(2 * np.pi * sigma[0, j].item()**2)) * np.exp(-0.5 * ((label.item() - mu[0, j].item())**2) / sigma[0, j].item()**2)
+                    mixture_prob += pi[0, j].item() * norm_prob
+
+                # Avoid log(0) by adding a small value to mixture_prob
+                mixture_prob = max(mixture_prob, 1e-10)
+                log_likelihood = np.log(mixture_prob)
+                log_likelihoods.append(log_likelihood)
+
+
         # Calculate R^2
         all_predicted = np.array(all_predicted)
         all_actual = np.array(all_actual)
         ss_res = np.sum((all_actual - all_predicted) ** 2)
         ss_tot = np.sum((all_actual - np.mean(all_actual)) ** 2)
-        r2_score = 1 - (ss_res / ss_tot)
+        r2_score = (1 - (ss_res / ss_tot)) 
                 
         total_nll_losses.append(np.mean(nll_losses))
-        # total_rmse_losses.append(np.mean(rmse_losses))
         total_mae_losses.append(np.mean(mae_losses))
         total_mape_losses.append(np.mean(mape_losses))
+        total_picp.append(np.mean(picp_coverage))
+        total_ll.append(np.mean(log_likelihoods))
         total_r2_scores.append(r2_score)
 
     # Calulate average of metrics across all windows
-    average_nll_loss = np.mean(total_nll_losses)
-    # average_rmse_loss = np.mean(rmse_losses)
-    average_mae_loss = np.mean(total_mae_losses)
-    average_mape_loss = np.mean(total_mape_losses)
+    average_nll_loss = np.mean(nll_losses)
+    average_mae_loss = np.mean(mae_losses)
+    average_mape_loss = np.mean(mape_losses)
+    average_picp = np.mean(total_picp)
+    average_ll = np.mean(total_ll)
     average_r2_score = np.mean(total_r2_scores)
 
-    return average_nll_loss, average_mae_loss, average_mape_loss, average_r2_score
+
+
+    return average_nll_loss, average_mae_loss, average_mape_loss, average_r2_score, average_picp, average_ll

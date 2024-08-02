@@ -63,8 +63,8 @@ def prepare_lstm_data():
 
 # Normalize the count values
 def normalize_count(data):
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    data['total_trips'] = scaler.fit_transform(data['total_trips'].values.reshape(-1, 1))
+    scaler = MinMaxScaler()
+    data[['total_trips']] = scaler.fit_transform(data[['total_trips']])
     return data, scaler
 
 # Create sequences
@@ -116,4 +116,3 @@ def inverse_normalize_count(data, scaler):
     data = scaler.inverse_transform(data.reshape(-1, 1))
     data = np.round(data)
     return data
-prepare_mlp_data()

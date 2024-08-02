@@ -5,7 +5,7 @@ def plot_training_loss(train_losses, val_losses, window_idx):
     epochs = range(len(train_losses))
     plt.figure(figsize=(10, 5))
     plt.plot(epochs, train_losses, label='Train Loss')
-    plt.plot(epochs, val_losses, label='Train Loss')
+    plt.plot(epochs, val_losses, label='Validation Loss')
     plt.title(f'Training and Validation Loss for Window {window_idx}')
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
