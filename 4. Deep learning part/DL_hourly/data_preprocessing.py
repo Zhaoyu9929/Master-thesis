@@ -4,6 +4,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder, MinMaxScaler
 import torch
 from config import seq_length
 import math
+import pickle
 
 def prepare_mlp_data():
     path = r'C:\Users\yanzh\Desktop\code_and_data\4. Deep learning part\处理数据\MLP data.csv'
@@ -33,8 +34,15 @@ def prepare_mlp_data():
     
     # Ensure all data is numeric
     data = data.apply(pd.to_numeric, errors='coerce')
+
+    # Save the scalers
+    with open(r"C:\Users\yanzh\Desktop\code_and_data\4. Deep learning part\处理数据\scaler1.pkl", 'wb') as file:
+        pickle.dump(scaler1, file)
+
+    with open(r"C:\Users\yanzh\Desktop\code_and_data\4. Deep learning part\处理数据\scaler2.pkl", 'wb') as file:
+        pickle.dump(scaler2, file)
     return data
-    
+
 # For holiday information
 def one_hot_encode(data, features):
     # One-hot encode categorical features
@@ -66,7 +74,7 @@ def prepare_lstm_data():
 # Normalize the count values
 def normalize_count(data):
     scaler = MinMaxScaler()
-    data['total_trips'] = scaler.fit_transform(data['total_trips'].values.reshape(-1, 1))
+    data[['total_trips']] = scaler.fit_transform(data[['total_trips']])
     return data, scaler
 
 # Create sequences
@@ -119,5 +127,3 @@ def inverse_normalize_count(data, scaler):
     data = scaler.inverse_transform(data)
     data = np.round(data)
     return data
-
-prepare_mlp_data()
